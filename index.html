@@ -51,84 +51,85 @@
         TimeZoneLabel,
         reactiveUtils
       ) => {
-      
-      const map = new WebMap({
-        portalItem: {
-          id: "c5d29342996046819d7f906eebac8ce1"
+        
+        const updateChart = (time) => {
+            console.log(`time: ${time}`);
         }
-      });
+            
+        const addTimeSlider = (layer) => {
+            view.whenLayerView(layer).then((lv) => {
+                console.log(layer.timeInfo);
+                
+                // around up the full time extent to full hour
+                timeSlider.fullTimeExtent = layer.timeInfo.fullTimeExtent.expandTo("years");
+                timeSlider.stops = {
+                interval: layer.timeInfo.interval
+                };
 
-      const view = new MapView({
-        map: map,
-        container: "viewDiv",
-        zoom: 1,
-        center: [0,0]
-      });
+                console.log("timeSlider", timeSlider);
+                reactiveUtils.watch(
+                    () => timeSlider.timeExtent,
+                    () => updateChart(timeSlider?.timeExtent?.start.getTime())
+                )
+            });
 
-      // time slider widget initialization
-      const timeSlider = new TimeSlider({
-        container: "timeSlider",
-        view: view,
-        timeVisible: true, // show the time stamps on the timeslider
-        loop: true
-      });
+            // calcite input time zone component allows users to pick from one of the IANA
+            // time zones without having to add the time zones manually to a drop down
+            const timezonePicker = document.getElementById("timezone-picker");
+            view.ui.add("timezone-picker", "top-right");
 
-      // add the UI for a title
-      view.ui.add("titleDiv", "top-right");
+            // Change the map view's time zone when user picks a time zone from the component
+            timezonePicker.addEventListener("calciteInputTimeZoneChange", () => {
+                view.timeZone = timezonePicker.value;
+            });
 
-
-    const msgBox = document.getElementById("titleText");
-    
-    map.when(() => {
-        console.log(map.layers.items);
-        addTimeSlider(map.findLayerById("1932c91644c-layer-2"))
-    })
+            // TimeZoneLabel lets users know what the time zone of the view is.
+            // This provides an important context to users how the date and times are displayed
+            view.ui.add(new TimeZoneLabel({ view: view }), "top-left");
+        }
         
-    const addTimeSlider = (layer) => {
-      view.whenLayerView(layer).then((lv) => {
-        console.log(layer.timeInfo);
-        
-        // around up the full time extent to full hour
-        timeSlider.fullTimeExtent = layer.timeInfo.fullTimeExtent.expandTo("years");
-        timeSlider.stops = {
-          interval: layer.timeInfo.interval
-        };
-
-        console.log("timeSlider", timeSlider);
-        reactiveUtils.watch(
-            () => timeSlider.timeExtent,
-            () => {
-            console.log(`time: ${timeSlider?.timeExtent?.start}`);
+        const map = new WebMap({
+            portalItem: {
+            id: "c5d29342996046819d7f906eebac8ce1"
+            }
         });
-      });
 
-      // calcite input time zone component allows users to pick from one of the IANA
-      // time zones without having to add the time zones manually to a drop down
-      const timezonePicker = document.getElementById("timezone-picker");
-      view.ui.add("timezone-picker", "top-right");
+        const view = new MapView({
+            map: map,
+            container: "viewDiv",
+            zoom: 1,
+            center: [0,0]
+        });
 
-      // Change the map view's time zone when user picks a time zone from the component
-      timezonePicker.addEventListener("calciteInputTimeZoneChange", () => {
-        view.timeZone = timezonePicker.value;
-      });
+        // time slider widget initialization
+        const timeSlider = new TimeSlider({
+            container: "timeSlider",
+            view: view,
+            timeVisible: true, // show the time stamps on the timeslider
+            loop: true
+        });
 
-       // TimeZoneLabel lets users know what the time zone of the view is.
-       // This provides an important context to users how the date and times are displayed
-      view.ui.add(new TimeZoneLabel({ view: view }), "top-left");
-    }
+        // add the UI for a title
+        view.ui.add("titleDiv", "top-right");
+
+        const msgBox = document.getElementById("titleText");
         
-
-      const legend = new Legend({
-        view: view
-      });
-      const legendExpand = new Expand({
-        expandIcon: "legend",
-        expandTooltip: "Legend",
-        view: view,
-        content: legend,
-        expanded: false
-      });
-      view.ui.add(legendExpand, "top-left");
+        map.when(() => {
+            console.log(map.layers.items);
+            addTimeSlider(map.findLayerById("1932c91644c-layer-2"))
+        })
+            
+        const legend = new Legend({
+            view: view
+        });
+        const legendExpand = new Expand({
+            expandIcon: "legend",
+            expandTooltip: "Legend",
+            view: view,
+            content: legend,
+            expanded: false
+        });
+        view.ui.add(legendExpand, "top-left");
     });
   </script>
   </head>
