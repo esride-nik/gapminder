@@ -9,21 +9,6 @@
     <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css"/>
     <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.31/"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const options = {
-            // tell Dojo where to load other packages
-            dojoConfig: {
-                async: true,
-            packages: [
-                {
-                    location: 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js',
-                    name: 'Chart'
-                }
-            ]
-            }
-        };
-</script> -->
 
     <style>
       html,
@@ -84,36 +69,67 @@
         Chart
       ) => {
         
-        // Global chart instance
+        // Global instances
         let bubbleChart;
-
-        // Function to update year label
-        function updateYearLabel(year) {
-            document.getElementById('yearLabel').textContent = year;
-            drawChart(year);
-        }
+        let layerView;
+        let layer;
 
         // Fetch data (mock implementation, replace with actual getData)
-        async function getData(year) {
-            // TODO: Replace this with an actual data fetch logic
-            // Example structure: [{COUNTRY: 'Country A', POP: 1000, GDPcap: 2000, LEB: 50, ...}]
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    resolve([
-                        { COUNTRY: 'Country A', POP: 1000, GDPcap: 2000, LEB: 75 },
-                        { COUNTRY: 'Country B', POP: 500, GDPcap: 1500, LEB: 65 },
-                        { COUNTRY: 'Country C', POP: 2000, GDPcap: 3000, LEB: 80 },
-                    ]);
-                }, 500);
-            });
+        async function getData(time) {
+            const timeNow = time.getTime();
+            const timeOneYearFromNow = new Date(time.setFullYear(time.getFullYear() + 1));
+
+            const query = layer.createQuery();
+            query.timeExtent = {
+                start: timeNow,
+                end: timeOneYearFromNow
+            }
+            query.outFields = "*";
+
+            return layerView.queryFeatures(query);
         }
 
         // Draw chart
-        async function drawChart(year) {
-            const data = await getData(year);
+        async function drawChart(time) {
+            const data = await getData(time);
+            console.log("data", data)
+            const formattedData = data.features.map((f) => f.attributes)
+            console.log("data", formattedData.length, formattedData)
+
+            
+
+            /*
+                {
+      "attributes" : {
+        "OBJECTID" : 1, 
+        "COUNTRY" : "Samoa", 
+        "ISO" : "WS", 
+        "COUNTRYAFF" : "Samoa", 
+        "AFF_ISO" : "WS", 
+        "Country_name_ISO3166" : "Samoa", 
+        "Official_state_name_ISO3166" : "The Independent State of Samoa", 
+        "Sovereignty_ISO3166_1" : "UN member state", 
+        "Alpha_3_code_ISO3166_1" : "WSM", 
+        "Numeric_code_ISO3166_1" : 882, 
+        "Subdivision_code_ISO3166_2" : "ISO 3166-2:WS", 
+        "Internet_ccTLD_ISO3166_2" : ".ws", 
+        "ID" : "WSM1990", 
+        "Country_Name" : "Samoa", 
+        "YEAR" : "1990", 
+        "POP" : 162797, 
+        "LEB" : 66.281, 
+        "GDPcap" : 2280.316719, 
+        "Jahr" : 1990, 
+        "Datum" : 631148400000, 
+        "GDPpercapLOG" : 7, 
+        "Shape__Area" : 3132370931.3007813, 
+        "Shape__Length" : 338821.83988179517
+      }
+        */
+
             
             // Transform data into Chart.js bubble dataset
-            const bubbleData = data.map(item => ({
+            const bubbleData = formattedData.map(item => ({
                 x: item.GDPcap,       // X-axis: GDP per capita
                 y: item.LEB,          // Y-axis: Life expectancy
                 r: Math.sqrt(item.POP) / 10, // Radius: Scaled population
@@ -124,7 +140,7 @@
                 type: 'bubble',
                 data: {
                     datasets: [{
-                        label: `Data for ${year}`,
+                        label: `Data for ${time.getFullYear()}`,
                         data: bubbleData,
                         backgroundColor: 'rgba(75, 192, 192, 0.6)',
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -159,7 +175,7 @@
             // If chart exists, update data, otherwise create new chart
             if (bubbleChart) {
                 bubbleChart.data.datasets[0].data = bubbleData;
-                bubbleChart.data.datasets[0].label = `Data for ${year}`;
+                bubbleChart.data.datasets[0].label = `Data for ${time.getFullYear()}`;
                 bubbleChart.update();
             } else {
                 const ctx = document.getElementById('bubbleChart').getContext('2d');
@@ -169,23 +185,22 @@
 
         // Initial chart rendering
         document.addEventListener('DOMContentLoaded', () => {
-            drawChart(time.now()); // Default year
+            drawChart(time.now());
         });
             
         const addTimeSlider = (layer) => {
             view.whenLayerView(layer).then((lv) => {
-                console.log(layer.timeInfo);
-                
+                layerView = lv;
+
                 // around up the full time extent to full hour
                 timeSlider.fullTimeExtent = layer.timeInfo.fullTimeExtent.expandTo("years");
                 timeSlider.stops = {
                 interval: layer.timeInfo.interval
                 };
 
-                console.log("timeSlider", timeSlider);
                 reactiveUtils.watch(
                     () => timeSlider.timeExtent,
-                    () => drawChart(timeSlider?.timeExtent?.start.getTime())
+                    () => drawChart(timeSlider?.timeExtent?.start)
                 )
             });
 
@@ -231,8 +246,10 @@
         const msgBox = document.getElementById("titleText");
         
         map.when(() => {
-            console.log(map.layers.items);
-            addTimeSlider(map.findLayerById("1932c91644c-layer-2"))
+            layer = map.findLayerById("1932c91644c-layer-2");
+            layer.outFields = "*";
+
+            addTimeSlider(layer)
         })
             
         const legend = new Legend({
