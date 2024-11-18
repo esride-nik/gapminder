@@ -9,16 +9,46 @@
     <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css"/>
     <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.31/"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const options = {
+            // tell Dojo where to load other packages
+            dojoConfig: {
+                async: true,
+            packages: [
+                {
+                    location: 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js',
+                    name: 'Chart'
+                }
+            ]
+            }
+        };
+</script> -->
 
     <style>
       html,
-      body,
-      #viewDiv {
+      body {
         padding: 0;
         margin: 0;
         height: 100%;
         width: 100%;
       }
+
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 50%;
+      }
+      
+      #chart-container {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 50%;
+        position: absolute;
+        left: 50%;
+    }
 
       #timeSlider {
         position: absolute;
@@ -41,7 +71,8 @@
       "esri/widgets/Expand",
       "esri/widgets/Legend",
       "esri/widgets/TimeZoneLabel",
-      "esri/core/reactiveUtils"
+      "esri/core/reactiveUtils",
+      "https://cdn.jsdelivr.net/npm/chart.js"
     ], (
         WebMap,
         MapView,
@@ -49,12 +80,97 @@
         Expand,
         Legend,
         TimeZoneLabel,
-        reactiveUtils
+        reactiveUtils,
+        Chart
       ) => {
         
-        const updateChart = (time) => {
-            console.log(`time: ${time}`);
+        // Global chart instance
+        let bubbleChart;
+
+        // Function to update year label
+        function updateYearLabel(year) {
+            document.getElementById('yearLabel').textContent = year;
+            drawChart(year);
         }
+
+        // Fetch data (mock implementation, replace with actual getData)
+        async function getData(year) {
+            // TODO: Replace this with an actual data fetch logic
+            // Example structure: [{COUNTRY: 'Country A', POP: 1000, GDPcap: 2000, LEB: 50, ...}]
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve([
+                        { COUNTRY: 'Country A', POP: 1000, GDPcap: 2000, LEB: 75 },
+                        { COUNTRY: 'Country B', POP: 500, GDPcap: 1500, LEB: 65 },
+                        { COUNTRY: 'Country C', POP: 2000, GDPcap: 3000, LEB: 80 },
+                    ]);
+                }, 500);
+            });
+        }
+
+        // Draw chart
+        async function drawChart(year) {
+            const data = await getData(year);
+            
+            // Transform data into Chart.js bubble dataset
+            const bubbleData = data.map(item => ({
+                x: item.GDPcap,       // X-axis: GDP per capita
+                y: item.LEB,          // Y-axis: Life expectancy
+                r: Math.sqrt(item.POP) / 10, // Radius: Scaled population
+                label: item.COUNTRY   // Tooltip label
+            }));
+
+            const chartConfig = {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: `Data for ${year}`,
+                        data: bubbleData,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const dataPoint = context.raw;
+                                    return `${dataPoint.label}: GDP per Capita: ${dataPoint.x}, Life Expectancy: ${dataPoint.y}, Population: ${dataPoint.r * 10}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'GDP per Capita' },
+                            type: 'linear',
+                            position: 'bottom',
+                        },
+                        y: {
+                            title: { display: true, text: 'Life Expectancy' }
+                        }
+                    }
+                }
+            };
+
+            // If chart exists, update data, otherwise create new chart
+            if (bubbleChart) {
+                bubbleChart.data.datasets[0].data = bubbleData;
+                bubbleChart.data.datasets[0].label = `Data for ${year}`;
+                bubbleChart.update();
+            } else {
+                const ctx = document.getElementById('bubbleChart').getContext('2d');
+                bubbleChart = new Chart(ctx, chartConfig);
+            }
+        }
+
+        // Initial chart rendering
+        document.addEventListener('DOMContentLoaded', () => {
+            drawChart(time.now()); // Default year
+        });
             
         const addTimeSlider = (layer) => {
             view.whenLayerView(layer).then((lv) => {
@@ -69,7 +185,7 @@
                 console.log("timeSlider", timeSlider);
                 reactiveUtils.watch(
                     () => timeSlider.timeExtent,
-                    () => updateChart(timeSlider?.timeExtent?.start.getTime())
+                    () => drawChart(timeSlider?.timeExtent?.start.getTime())
                 )
             });
 
@@ -135,6 +251,9 @@
   </head>
 
   <body>
+    <div id="chart-container">
+        <canvas id="bubbleChart"></canvas>
+    </div>
     <div id="viewDiv"></div>
     <div id="timeSlider"></div>
     <div id="titleDiv" class="esri-widget">
