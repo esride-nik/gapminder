@@ -17,22 +17,24 @@
         margin: 0;
         height: 100%;
         width: 100%;
+        /* background: black; */
       }
 
       #viewDiv {
         padding: 0;
         margin: 0;
         height: 100%;
-        width: 50%;
+        width: 30%;
+        position: absolute;
+        left: 70%;
+        top: 0%;
       }
       
       #chart-container {
         padding: 0;
         margin: 0;
         height: 100%;
-        width: 50%;
-        position: absolute;
-        left: 50%;
+        width: 70%;
     }
 
       #timeSlider {
@@ -76,8 +78,9 @@
 
         // Fetch data (mock implementation, replace with actual getData)
         async function getData(time) {
-            const timeNow = time.getTime();
-            const timeOneYearFromNow = new Date(time.setFullYear(time.getFullYear() + 1));
+            const timeNow = time;
+            let timeOneYearFromNow = new Date(timeNow)
+            timeOneYearFromNow = new Date(timeOneYearFromNow.setFullYear(timeOneYearFromNow.getFullYear() + 1));
 
             const query = layer.createQuery();
             query.timeExtent = {
@@ -92,47 +95,37 @@
         // Draw chart
         async function drawChart(time) {
             const data = await getData(time);
-            console.log("data", data)
+
             const formattedData = data.features.map((f) => f.attributes)
-            console.log("data", formattedData.length, formattedData)
+            // const formattedData = data.features.map((f) => f.attributes).slice(0,10)
 
+            // let fakePop = 0
+            // const formattedData = data.features.map((f) => {
+            //     fakePop++
+            //     return {
+            //     ...f.attributes,
+            //     "POP": fakePop,
+            //     "GDPcap": fakePop,
+            //     "LEB": 50
+            // }})
+
+            // const formattedData = [
+            //             { COUNTRY: 'Country A', POP: 1000, GDPcap: 2000, LEB: 75 },
+            //             { COUNTRY: 'Country B', POP: 500, GDPcap: 1500, LEB: 65 },
+            //             { COUNTRY: 'Country C', POP: 2000, GDPcap: 3000, LEB: 80 },
+                    // ]
+
+            console.log("formatted data", formattedData.length, formattedData)
             
-
-            /*
-                {
-      "attributes" : {
-        "OBJECTID" : 1, 
-        "COUNTRY" : "Samoa", 
-        "ISO" : "WS", 
-        "COUNTRYAFF" : "Samoa", 
-        "AFF_ISO" : "WS", 
-        "Country_name_ISO3166" : "Samoa", 
-        "Official_state_name_ISO3166" : "The Independent State of Samoa", 
-        "Sovereignty_ISO3166_1" : "UN member state", 
-        "Alpha_3_code_ISO3166_1" : "WSM", 
-        "Numeric_code_ISO3166_1" : 882, 
-        "Subdivision_code_ISO3166_2" : "ISO 3166-2:WS", 
-        "Internet_ccTLD_ISO3166_2" : ".ws", 
-        "ID" : "WSM1990", 
-        "Country_Name" : "Samoa", 
-        "YEAR" : "1990", 
-        "POP" : 162797, 
-        "LEB" : 66.281, 
-        "GDPcap" : 2280.316719, 
-        "Jahr" : 1990, 
-        "Datum" : 631148400000, 
-        "GDPpercapLOG" : 7, 
-        "Shape__Area" : 3132370931.3007813, 
-        "Shape__Length" : 338821.83988179517
-      }
-        */
-
-            
+            const scalingFactor = 1
+            const powFactor = 0.1
             // Transform data into Chart.js bubble dataset
             const bubbleData = formattedData.map(item => ({
                 x: item.GDPcap,       // X-axis: GDP per capita
                 y: item.LEB,          // Y-axis: Life expectancy
-                r: Math.sqrt(item.POP) / 10, // Radius: Scaled population
+                // r: Math.log10(item.POP) * scalingFactor, // Radius: Scaled population
+                r: Math.pow(item.POP, powFactor) / scalingFactor, // Radius: Scaled population
+                // r: Math.sqrt(item.POP) / scalingFactor, // Radius: Scaled population
                 label: item.COUNTRY   // Tooltip label
             }));
 
@@ -183,25 +176,34 @@
             }
         }
 
-        // Initial chart rendering
-        document.addEventListener('DOMContentLoaded', () => {
-            drawChart(time.now());
-        });
-            
-        const addTimeSlider = (layer) => {
+        const addTimeDetails = (layer) => {
             view.whenLayerView(layer).then((lv) => {
                 layerView = lv;
 
-                // around up the full time extent to full hour
+                const start = layer.timeInfo.fullTimeExtent.start
+                let end = new Date(start)
+                end.setMonth(11)    // month is 0-based >.<
+                end.setDate(31) // date is 1-based
+
                 timeSlider.fullTimeExtent = layer.timeInfo.fullTimeExtent.expandTo("years");
+                // timeSlider.timeExtent = { start, end }; 
                 timeSlider.stops = {
-                interval: layer.timeInfo.interval
+                    value: 1,
+                    unit: "years"
                 };
 
                 reactiveUtils.watch(
                     () => timeSlider.timeExtent,
                     () => drawChart(timeSlider?.timeExtent?.start)
                 )
+
+                // Chart rendering on init and when lv changes
+                reactiveUtils.watch(
+                    () => !layerView.updating, 
+                    () => {
+                        if (timeSlider?.timeExtent?.start !== undefined) drawChart(timeSlider?.timeExtent?.start);
+                    }
+                );
             });
 
             // calcite input time zone component allows users to pick from one of the IANA
@@ -249,7 +251,7 @@
             layer = map.findLayerById("1932c91644c-layer-2");
             layer.outFields = "*";
 
-            addTimeSlider(layer)
+            addTimeDetails(layer)
         })
             
         const legend = new Legend({
