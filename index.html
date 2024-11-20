@@ -78,6 +78,9 @@
         let bubbleChart;
         let layerView;
         let layer;
+        let map;
+        let view;
+        let timeSlider;
 
         // Fetch data (mock implementation, replace with actual getData)
         async function getData(time) {
@@ -188,15 +191,37 @@
                 end.setMonth(11)    // month is 0-based >.<
                 end.setDate(31) // date is 1-based
 
-                timeSlider.fullTimeExtent = layer.timeInfo.fullTimeExtent.expandTo("years");
-                // timeSlider.timeExtent = { start, end }; 
-                timeSlider.stops = {
-                    value: 1,
-                    unit: "years"
-                };
+                
+                console.log(layer.timeInfo.fullTimeExtent.end, layer.timeInfo.fullTimeExtent.start)
+                console.log(layer.timeInfo.fullTimeExtent.end - layer.timeInfo.fullTimeExtent.start)
+                let stop = new Date(layer.timeInfo.fullTimeExtent.start)
+                const effectiveStops = []
+                while (stop < layer.timeInfo.fullTimeExtent.end) {
+                    effectiveStops.push(stop);
+                    stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
+                }
+                console.log("effectiveStops", effectiveStops)
+
+                // time slider widget initialization
+                timeSlider = new TimeSlider({
+                    container: "timeSlider",
+                    view: view,
+                    timeVisible: false,
+                    loop: true,
+                    mode: "time-window",
+                    playRate: 2000,
+                    fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
+                    timeExtent: { start, end },
+                    stops: {
+                        interval: {
+                            value: 1,
+                            unit: "years"
+                        }
+                    }
+                });
 
                 reactiveUtils.watch(
-                    () => timeSlider.timeExtent,
+                    () => timeSlider?.timeExtent?.start,
                     () => drawChart(timeSlider?.timeExtent?.start)
                 )
 
@@ -225,47 +250,43 @@
         }
         
         // init map and widgets
-        const map = new WebMap({
-            portalItem: {
-                id: webMapItemId
-            }
-        });
+        const initMap = () => {
+            map = new WebMap({
+                portalItem: {
+                    id: webMapItemId
+                }
+            });
 
-        const view = new MapView({
-            map: map,
-            container: "viewDiv",
-            zoom: 1,
-            center: [0,0]
-        });
+            view = new MapView({
+                map: map,
+                container: "viewDiv",
+                zoom: 1,
+                center: [0,0]
+            });
 
-        // time slider widget initialization
-        const timeSlider = new TimeSlider({
-            container: "timeSlider",
-            view: view,
-            timeVisible: true, // show the time stamps on the timeslider
-            loop: true
-        });
-
-        const msgBox = document.getElementById("titleText");
-        
-        map.when(() => {
-            layer = map.findLayerById(continentsLayer);
-            layer.outFields = "*";
-
-            addTimeDetails(layer)
-        })
+            const msgBox = document.getElementById("titleText");
             
-        const legend = new Legend({
-            view: view
-        });
-        const legendExpand = new Expand({
-            expandIcon: "legend",
-            expandTooltip: "Legend",
-            view: view,
-            content: legend,
-            expanded: false
-        });
-        view.ui.add(legendExpand, "top-left");
+            map.when(() => {
+                layer = map.findLayerById(continentsLayer);
+                layer.outFields = "*";
+
+                addTimeDetails(layer)
+            })
+                
+            const legend = new Legend({
+                view: view
+            });
+            const legendExpand = new Expand({
+                expandIcon: "legend",
+                expandTooltip: "Legend",
+                view: view,
+                content: legend,
+                expanded: false
+            });
+            view.ui.add(legendExpand, "top-left");
+        }
+    
+        initMap();
     });
   </script>
   </head>
