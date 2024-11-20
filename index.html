@@ -81,6 +81,7 @@
         let map;
         let view;
         let timeSlider;
+        let rendererInfo;
 
         // Fetch data (mock implementation, replace with actual getData)
         async function getData(time) {
@@ -121,10 +122,10 @@
             //             { COUNTRY: 'Country C', POP: 2000, GDPcap: 3000, LEB: 80 },
                     // ]
 
-            console.log("formatted data", formattedData.length, formattedData)
+            console.log("formatted data", formattedData.length, formattedData, rendererInfo)
             
             const scalingFactor = 1
-            const powFactor = 0.1
+            const powFactor = 0.15
             // Transform data into Chart.js bubble dataset
             const bubbleData = formattedData.map(item => ({
                 x: item.GDPcap,       // X-axis: GDP per capita
@@ -183,6 +184,14 @@
         }
 
         const addTimeDetails = (layer) => {
+            
+            if (layer?.renderer?.uniqueValueGroups?.length > 0) {
+                rendererInfo = layer.renderer.uniqueValueGroups[0].classes?.map((rendererClass) => { return {
+                    continent: rendererClass.label,
+                    color: rendererClass.symbol.color
+                }})
+            }
+
             view.whenLayerView(layer).then((lv) => {
                 layerView = lv;
 
