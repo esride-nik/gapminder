@@ -191,16 +191,13 @@
                 end.setMonth(11)    // month is 0-based >.<
                 end.setDate(31) // date is 1-based
 
-                
-                console.log(layer.timeInfo.fullTimeExtent.end, layer.timeInfo.fullTimeExtent.start)
-                console.log(layer.timeInfo.fullTimeExtent.end - layer.timeInfo.fullTimeExtent.start)
-                let stop = new Date(layer.timeInfo.fullTimeExtent.start)
-                const effectiveStops = []
-                while (stop < layer.timeInfo.fullTimeExtent.end) {
-                    effectiveStops.push(stop);
-                    stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
-                }
-                console.log("effectiveStops", effectiveStops)
+                // cool! could be useful, but we don't need it here
+                // let stop = new Date(layer.timeInfo.fullTimeExtent.start)
+                // const effectiveStops = []
+                // while (stop < layer.timeInfo.fullTimeExtent.end) {
+                //     effectiveStops.push(stop);
+                //     stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
+                // }
 
                 // time slider widget initialization
                 timeSlider = new TimeSlider({
