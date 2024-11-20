@@ -43,12 +43,6 @@
         right: 5%;
         bottom: 20px;
       }
-
-      #titleDiv {
-        padding: 10px;
-        font-weight: 36;
-        text-align: center;
-      }
     </style>
     <script>
     require([
@@ -252,13 +246,10 @@
             loop: true
         });
 
-        // add the UI for a title
-        view.ui.add("titleDiv", "top-right");
-
         const msgBox = document.getElementById("titleText");
         
         map.when(() => {
-            layer = map.findLayerById(countriesLayer);
+            layer = map.findLayerById(continentsLayer);
             layer.outFields = "*";
 
             addTimeDetails(layer)
@@ -285,9 +276,6 @@
     </div>
     <div id="viewDiv"></div>
     <div id="timeSlider"></div>
-    <div id="titleDiv" class="esri-widget">
-      <div id="titleText">GBP</div>
-    </div>
     <calcite-input-time-zone mode="name" id="timezone-picker"></calcite-input-time-zone>
   </body>
 
