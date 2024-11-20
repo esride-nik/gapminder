@@ -71,6 +71,15 @@
         Chart
       ) => {
         
+         // Nik's
+        // const webMapItemId = "c5d29342996046819d7f906eebac8ce1";
+        // const countriesLayer = "1932c91644c-layer-2";
+
+        // Stka's
+        const webMapItemId = "c799e82d9dd64da5aade06ce72c0139b";
+        const countriesLayer = "1934609d8c1-layer-2";
+        const continentsLayer = "193460b984d-layer-3";
+
         // Global instances
         let bubbleChart;
         let layerView;
@@ -221,9 +230,10 @@
             view.ui.add(new TimeZoneLabel({ view: view }), "top-left");
         }
         
+        // init map and widgets
         const map = new WebMap({
             portalItem: {
-            id: "c5d29342996046819d7f906eebac8ce1"
+                id: webMapItemId
             }
         });
 
@@ -248,7 +258,7 @@
         const msgBox = document.getElementById("titleText");
         
         map.when(() => {
-            layer = map.findLayerById("1932c91644c-layer-2");
+            layer = map.findLayerById(countriesLayer);
             layer.outFields = "*";
 
             addTimeDetails(layer)
