@@ -87,7 +87,8 @@
         async function getData(time) {
             const timeNow = time;
             let timeOneYearFromNow = new Date(timeNow)
-            timeOneYearFromNow = new Date(timeOneYearFromNow.setFullYear(timeOneYearFromNow.getFullYear() + 1));
+            // add one year, subtract 1 ms to stay on dec 31st
+            timeOneYearFromNow = new Date(timeOneYearFromNow.setFullYear(timeOneYearFromNow.getFullYear() + 1) -1);
 
             const query = layer.createQuery();
             query.timeExtent = {
@@ -99,9 +100,22 @@
             return layerView.queryFeatures(query);
         }
 
+        getDataByContinent = (data) => {
+            const formattedData = data.features.map((f) => f.attributes)
+            const dataByContinent = rendererInfo.map((r) => {
+                return {
+                    continent: r.continent,
+                    data: formattedData.filter((d) => d.Continent === r.continent)
+                }
+            })
+            return dataByContinent
+        }
+
         // Draw chart
         async function drawChart(time) {
             const data = await getData(time);
+
+            const dataByContinent = getDataByContinent(data)
 
             const formattedData = data.features.map((f) => f.attributes)
             // const formattedData = data.features.map((f) => f.attributes).slice(0,10)
