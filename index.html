@@ -100,66 +100,54 @@
             return layerView.queryFeatures(query);
         }
 
-        getDataByContinent = (data) => {
+        const getChartJsBubbleData = (featureData) => {
+            const scalingFactor = 1
+            const powFactor = 0.15
+            
+            return featureData.map((item) => {
+                return {
+                    x: item.GDPcap,       // X-axis: GDP per capita
+                    y: item.LEB,          // Y-axis: Life expectancy
+                    // r: Math.log10(item.POP) * scalingFactor, // Radius: Scaled population
+                    r: Math.pow(item.POP, powFactor) / scalingFactor, // Radius: Scaled population
+                    // r: Math.sqrt(item.POP) / scalingFactor, // Radius: Scaled population
+                    label: item.COUNTRY   // Tooltip label
+            }})
+        }
+
+        const getChartJsBubbleDataByContinent = (data) => {
             const formattedData = data.features.map((f) => f.attributes)
             const dataByContinent = rendererInfo.map((r) => {
                 return {
                     continent: r.continent,
-                    data: formattedData.filter((d) => d.Continent === r.continent)
+                    color: r.color,
+                    data: getChartJsBubbleData(formattedData.filter((d) => d.Continent === r.continent))
                 }
             })
             return dataByContinent
+        }
+
+        const getChartJsDatasets = (dataByContinent, time) => {
+            const colorFactor = 0.8;
+            return dataByContinent.map((dc) => { return {
+                label: `Data for ${dc.continent} in ${time.getFullYear()}`,
+                data: dc.data,
+                backgroundColor: `rgba(${dc.color.r}, ${dc.color.g}, ${dc.color.b}, ${dc.color.a})`,
+                borderColor: `rgba(${dc.color.r * colorFactor}, ${dc.color.g * colorFactor}, ${dc.color.b * colorFactor}, ${dc.color.a * colorFactor})`,
+                borderWidth: 1
+            }});
         }
 
         // Draw chart
         async function drawChart(time) {
             const data = await getData(time);
 
-            const dataByContinent = getDataByContinent(data)
-
-            const formattedData = data.features.map((f) => f.attributes)
-            // const formattedData = data.features.map((f) => f.attributes).slice(0,10)
-
-            // let fakePop = 0
-            // const formattedData = data.features.map((f) => {
-            //     fakePop++
-            //     return {
-            //     ...f.attributes,
-            //     "POP": fakePop,
-            //     "GDPcap": fakePop,
-            //     "LEB": 50
-            // }})
-
-            // const formattedData = [
-            //             { COUNTRY: 'Country A', POP: 1000, GDPcap: 2000, LEB: 75 },
-            //             { COUNTRY: 'Country B', POP: 500, GDPcap: 1500, LEB: 65 },
-            //             { COUNTRY: 'Country C', POP: 2000, GDPcap: 3000, LEB: 80 },
-                    // ]
-
-            console.log("formatted data", formattedData.length, formattedData, rendererInfo)
-            
-            const scalingFactor = 1
-            const powFactor = 0.15
-            // Transform data into Chart.js bubble dataset
-            const bubbleData = formattedData.map(item => ({
-                x: item.GDPcap,       // X-axis: GDP per capita
-                y: item.LEB,          // Y-axis: Life expectancy
-                // r: Math.log10(item.POP) * scalingFactor, // Radius: Scaled population
-                r: Math.pow(item.POP, powFactor) / scalingFactor, // Radius: Scaled population
-                // r: Math.sqrt(item.POP) / scalingFactor, // Radius: Scaled population
-                label: item.COUNTRY   // Tooltip label
-            }));
+            const dataByContinent = getChartJsBubbleDataByContinent(data)
 
             const chartConfig = {
                 type: 'bubble',
                 data: {
-                    datasets: [{
-                        label: `Data for ${time.getFullYear()}`,
-                        data: bubbleData,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
+                    datasets: getChartJsDatasets(dataByContinent, time)
                 },
                 options: {
                     responsive: true,
