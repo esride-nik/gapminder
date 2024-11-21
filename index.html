@@ -1,13 +1,27 @@
 <html lang="en">
-
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport"
-      content="initial-scale=1,maximum-scale=1,user-scalable=no" />
-    <title>TimeSlider widget and time zone | Sample | ArcGIS Maps SDK for JavaScript 4.31</title>
-    <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css"/>
-    <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>
+      TimeSlider widget and time zone | Sample | ArcGIS Maps SDK for JavaScript
+      4.31
+    </title>
+    <script
+      type="module"
+      src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.31/esri/themes/dark/main.css"
+    />
     <script src="https://js.arcgis.com/4.31/"></script>
 
     <style>
@@ -29,13 +43,13 @@
         left: 70%;
         top: 0%;
       }
-      
+
       #chart-container {
         padding: 0;
         margin: 0;
         height: 100%;
         width: 70%;
-    }
+      }
 
       #timeSlider {
         position: absolute;
@@ -45,16 +59,16 @@
       }
     </style>
     <script>
-    require([
-      "esri/WebMap",
-      "esri/views/MapView",
-      "esri/widgets/TimeSlider",
-      "esri/widgets/Expand",
-      "esri/widgets/Legend",
-      "esri/widgets/TimeZoneLabel",
-      "esri/core/reactiveUtils",
-      "https://cdn.jsdelivr.net/npm/chart.js"
-    ], (
+      require([
+        "esri/WebMap",
+        "esri/views/MapView",
+        "esri/widgets/TimeSlider",
+        "esri/widgets/Expand",
+        "esri/widgets/Legend",
+        "esri/widgets/TimeZoneLabel",
+        "esri/core/reactiveUtils",
+        "https://cdn.jsdelivr.net/npm/chart.js",
+      ], (
         WebMap,
         MapView,
         TimeSlider,
@@ -64,8 +78,7 @@
         reactiveUtils,
         Chart
       ) => {
-        
-         // Nik's
+        // Nik's
         // const webMapItemId = "c5d29342996046819d7f906eebac8ce1";
         // const countriesLayer = "1932c91644c-layer-2";
 
@@ -85,265 +98,274 @@
 
         // Fetch data (mock implementation, replace with actual getData)
         async function getData(time) {
-            const timeNow = time;
-            let timeOneYearFromNow = new Date(timeNow)
-            // add one year, subtract 1 ms to stay on dec 31st
-            timeOneYearFromNow = new Date(timeOneYearFromNow.setFullYear(timeOneYearFromNow.getFullYear() + 1) -1);
+          const timeNow = time;
+          let timeOneYearFromNow = new Date(timeNow);
+          // add one year, subtract 1 ms to stay on dec 31st
+          timeOneYearFromNow = new Date(
+            timeOneYearFromNow.setFullYear(
+              timeOneYearFromNow.getFullYear() + 1
+            ) - 1
+          );
 
-            const query = layer.createQuery();
-            query.timeExtent = {
-                start: timeNow,
-                end: timeOneYearFromNow
-            }
-            query.outFields = "*";
+          const query = layer.createQuery();
+          query.timeExtent = {
+            start: timeNow,
+            end: timeOneYearFromNow,
+          };
+          query.outFields = "*";
 
-            return layerView.queryFeatures(query);
+          return layerView.queryFeatures(query);
         }
 
         const getChartJsBubbleData = (featureData) => {
-            const scalingFactor = 1
-            const powFactor = 0.18
-            
-            return featureData.map((item) => {
-                return {
-                    x: item.GDPcap,       // X-axis: GDP per capita
-                    y: item.LEB,          // Y-axis: Life expectancy
-                    // r: Math.log10(item.POP) * scalingFactor, // Radius: Scaled population
-                    r: Math.pow(item.POP, powFactor) / scalingFactor, // Radius: Scaled population
-                    // r: Math.sqrt(item.POP) / scalingFactor, // Radius: Scaled population
-                    label: item.COUNTRY   // Tooltip label
-            }})
-        }
+          const scalingFactor = 1;
+          const powFactor = 0.18;
+
+          return featureData.map((item) => {
+            return {
+              x: item.GDPcap, // X-axis: GDP per capita
+              y: item.LEB, // Y-axis: Life expectancy
+              // r: Math.log10(item.POP) * scalingFactor, // Radius: Scaled population
+              r: Math.pow(item.POP, powFactor) / scalingFactor, // Radius: Scaled population
+              // r: Math.sqrt(item.POP) / scalingFactor, // Radius: Scaled population
+              label: item.COUNTRY, // Tooltip label
+            };
+          });
+        };
 
         const getChartJsBubbleDataByContinent = (data) => {
-            const formattedData = data.features.map((f) => f.attributes)
-            const dataByContinent = rendererInfo.map((r) => {
-                return {
-                    continent: r.continent,
-                    color: r.color,
-                    data: getChartJsBubbleData(formattedData.filter((d) => d.Continent === r.continent).sort((a, b) => a.label - b.label))
-                }
-            })
-            // TODO: changing list of countries causes inconsistencies in animation
-            console.log(JSON.stringify(dataByContinent[1].data.map((d) => d.label)))
-            return dataByContinent
-        }
+          const formattedData = data.features.map((f) => f.attributes);
+          const dataByContinent = rendererInfo.map((r) => {
+            return {
+              continent: r.continent,
+              color: r.color,
+              data: getChartJsBubbleData(
+                formattedData
+                  .filter((d) => d.Continent === r.continent)
+                  .sort((a, b) => a.label - b.label)
+              ),
+            };
+          });
+          // TODO: changing list of countries causes inconsistencies in animation
+          console.log(
+            JSON.stringify(dataByContinent[1].data.map((d) => d.label))
+          );
+          return dataByContinent;
+        };
 
         const getChartJsDatasets = (dataByContinent, time) => {
-            const colorFactor = 0.8;
-            const alphaFactor = 0.8;
-            return dataByContinent.map((dc) => { return {
-                label: `Data for ${dc.continent} in ${time.getFullYear()}`,
-                data: dc.data,
-                backgroundColor: `rgba(${dc.color.r}, ${dc.color.g}, ${dc.color.b}, ${(dc.color.a * alphaFactor).toFixed(2)})`,
-                borderColor: `rgba(${(dc.color.r * colorFactor).toFixed(0)}, ${(dc.color.g * colorFactor).toFixed(0)}, ${(dc.color.b * colorFactor).toFixed(0)}, ${(dc.color.a * colorFactor).toFixed(0)})`,
-                borderWidth: 1
-            }});
-        }
+          const colorFactor = 0.8;
+          const alphaFactor = 0.8;
+          return dataByContinent.map((dc) => {
+            return {
+              label: `Data for ${dc.continent} in ${time.getFullYear()}`,
+              data: dc.data,
+              backgroundColor: `rgba(${dc.color.r}, ${dc.color.g}, ${
+                dc.color.b
+              }, ${(dc.color.a * alphaFactor).toFixed(2)})`,
+              borderColor: `rgba(${(dc.color.r * colorFactor).toFixed(0)}, ${(
+                dc.color.g * colorFactor
+              ).toFixed(0)}, ${(dc.color.b * colorFactor).toFixed(0)}, ${(
+                dc.color.a * colorFactor
+              ).toFixed(0)})`,
+              borderWidth: 1,
+            };
+          });
+        };
 
         // Draw chart
         async function drawChart(time) {
-            const data = await getData(time);
+          const data = await getData(time);
 
-            const dataByContinent = getChartJsBubbleDataByContinent(data)
+          const dataByContinent = getChartJsBubbleDataByContinent(data);
 
-            const chartConfig = {
-                type: 'bubble',
-                data: {
-                    datasets: getChartJsDatasets(dataByContinent, time)
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => {
-                                    const dataPoint = context.raw;
-                                    return `${dataPoint.label}: GDP per Capita: ${dataPoint.x}, Life Expectancy: ${dataPoint.y}, Population: ${dataPoint.r * 10}`;
-                                }
-                            }
-                        }
+          const chartConfig = {
+            type: "bubble",
+            data: {
+              datasets: getChartJsDatasets(dataByContinent, time),
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: (context) => {
+                      const dataPoint = context.raw;
+                      return `${dataPoint.label}: GDP per Capita: ${
+                        dataPoint.x
+                      }, Life Expectancy: ${dataPoint.y}, Population: ${
+                        dataPoint.r * 10
+                      }`;
                     },
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'GDP per Capita' },
-                            type: 'linear',
-                            position: 'bottom',
-                            suggestedMin: 80000,
-                            suggestedMax: 120000,
-                            grid: {
-                                display: true,
-                                color: (context) => {
-                                    if (context.tick.value < 40000) {
-                                    return '#f00';
-                                    } else if (context.tick.value >= 40000) {
-                                    return '#ff0';
-                                    } else if (context.tick.value >= 80000) {
-                                    return '#0f0';
-                                    }
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  title: { display: true, text: "GDP per Capita" },
+                  type: "linear",
+                  position: "bottom",
+                  suggestedMin: 80000,
+                  suggestedMax: 120000,
+                  grid: {
+                    display: true,
+                    color: "#ccc",
+                  },
+                },
+                y: {
+                  title: { display: true, text: "Life Expectancy" },
+                  suggestedMin: 85,
+                  suggestedMax: 95,
+                  grid: {
+                    display: true,
+                    color: "#ccc",
+                  },
+                },
+              },
+            },
+          };
 
-                                    return '#ccc';
-                                },
-                            }
-                        },
-                        y: {
-                            title: { display: true, text: 'Life Expectancy' },
-                            suggestedMin: 85,
-                            suggestedMax: 95,
-                            grid: {
-                                display: true,
-                                color: (context) => {
-                                    if (context.tick.value < 40) {
-                                    return '#f00';
-                                    } else if (context.tick.value >= 40) {
-                                    return '#ff0';
-                                    } else if (context.tick.value >= 75) {
-                                    return '#0f0';
-                                    }
-
-                                    return '#ccc';
-                                },
-                            }
-                        }
-                    }
-                }
-            };
-
-            // If chart exists, update data, otherwise create new chart
-            if (bubbleChart) {
-                const chartJsDatasets = getChartJsDatasets(dataByContinent, time);
-                for (let i = 0; i < bubbleChart.data.datasets.length; i++) {
-                    bubbleChart.data.datasets[i].data = chartJsDatasets[i].data;
-                    bubbleChart.data.datasets[i].label = chartJsDatasets[i].label;
-                };
-                bubbleChart.update();
-            } else {
-                const ctx = document.getElementById('bubbleChart').getContext('2d');
-                bubbleChart = new Chart(ctx, chartConfig);
+          // If chart exists, update data, otherwise create new chart
+          if (bubbleChart) {
+            const chartJsDatasets = getChartJsDatasets(dataByContinent, time);
+            for (let i = 0; i < bubbleChart.data.datasets.length; i++) {
+              bubbleChart.data.datasets[i].data = chartJsDatasets[i].data;
+              bubbleChart.data.datasets[i].label = chartJsDatasets[i].label;
             }
+            bubbleChart.update();
+          } else {
+            const ctx = document.getElementById("bubbleChart").getContext("2d");
+            bubbleChart = new Chart(ctx, chartConfig);
+          }
         }
 
         const addTimeDetails = (layer) => {
-            
-            if (layer?.renderer?.uniqueValueGroups?.length > 0) {
-                rendererInfo = layer.renderer.uniqueValueGroups[0].classes?.map((rendererClass) => { return {
-                    continent: rendererClass.label,
-                    color: rendererClass.symbol.color
-                }})
-            }
+          if (layer?.renderer?.uniqueValueGroups?.length > 0) {
+            rendererInfo = layer.renderer.uniqueValueGroups[0].classes?.map(
+              (rendererClass) => {
+                return {
+                  continent: rendererClass.label,
+                  color: rendererClass.symbol.color,
+                };
+              }
+            );
+          }
 
-            view.whenLayerView(layer).then((lv) => {
-                layerView = lv;
+          view.whenLayerView(layer).then((lv) => {
+            layerView = lv;
 
-                const start = layer.timeInfo.fullTimeExtent.start
-                let end = new Date(start)
-                end.setMonth(11)    // month is 0-based >.<
-                end.setDate(31) // date is 1-based
+            const start = layer.timeInfo.fullTimeExtent.start;
+            let end = new Date(start);
+            end.setMonth(11); // month is 0-based >.<
+            end.setDate(31); // date is 1-based
 
-                // cool! could be useful, but we don't need it here
-                // let stop = new Date(layer.timeInfo.fullTimeExtent.start)
-                // const effectiveStops = []
-                // while (stop < layer.timeInfo.fullTimeExtent.end) {
-                //     effectiveStops.push(stop);
-                //     stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
-                // }
+            // cool! could be useful, but we don't need it here
+            // let stop = new Date(layer.timeInfo.fullTimeExtent.start)
+            // const effectiveStops = []
+            // while (stop < layer.timeInfo.fullTimeExtent.end) {
+            //     effectiveStops.push(stop);
+            //     stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
+            // }
 
-                // time slider widget initialization
-                timeSlider = new TimeSlider({
-                    container: "timeSlider",
-                    view: view,
-                    timeVisible: false,
-                    loop: true,
-                    mode: "time-window",
-                    playRate: 1000,
-                    fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
-                    timeExtent: { start, end },
-                    stops: {
-                        interval: {
-                            value: 1,
-                            unit: "years"
-                        }
-                    }
-                });
-
-                reactiveUtils.watch(
-                    () => timeSlider?.timeExtent?.start,
-                    () => drawChart(timeSlider?.timeExtent?.start)
-                )
-
-                // Chart rendering on init and when lv changes
-                reactiveUtils.watch(
-                    () => !layerView.updating, 
-                    () => {
-                        if (timeSlider?.timeExtent?.start !== undefined) drawChart(timeSlider?.timeExtent?.start);
-                    }
-                );
+            // time slider widget initialization
+            timeSlider = new TimeSlider({
+              container: "timeSlider",
+              view: view,
+              timeVisible: false,
+              loop: true,
+              mode: "time-window",
+              playRate: 1000,
+              fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
+              timeExtent: { start, end },
+              stops: {
+                interval: {
+                  value: 1,
+                  unit: "years",
+                },
+              },
             });
 
-            // calcite input time zone component allows users to pick from one of the IANA
-            // time zones without having to add the time zones manually to a drop down
-            const timezonePicker = document.getElementById("timezone-picker");
-            view.ui.add("timezone-picker", "top-right");
+            reactiveUtils.watch(
+              () => timeSlider?.timeExtent?.start,
+              () => drawChart(timeSlider?.timeExtent?.start)
+            );
 
-            // Change the map view's time zone when user picks a time zone from the component
-            timezonePicker.addEventListener("calciteInputTimeZoneChange", () => {
-                view.timeZone = timezonePicker.value;
-            });
+            // Chart rendering on init and when lv changes
+            reactiveUtils.watch(
+              () => !layerView.updating,
+              () => {
+                if (timeSlider?.timeExtent?.start !== undefined)
+                  drawChart(timeSlider?.timeExtent?.start);
+              }
+            );
+          });
 
-            // TimeZoneLabel lets users know what the time zone of the view is.
-            // This provides an important context to users how the date and times are displayed
-            view.ui.add(new TimeZoneLabel({ view: view }), "top-left");
-        }
-        
+          // calcite input time zone component allows users to pick from one of the IANA
+          // time zones without having to add the time zones manually to a drop down
+          const timezonePicker = document.getElementById("timezone-picker");
+          view.ui.add("timezone-picker", "top-right");
+
+          // Change the map view's time zone when user picks a time zone from the component
+          timezonePicker.addEventListener("calciteInputTimeZoneChange", () => {
+            view.timeZone = timezonePicker.value;
+          });
+
+          // TimeZoneLabel lets users know what the time zone of the view is.
+          // This provides an important context to users how the date and times are displayed
+          view.ui.add(new TimeZoneLabel({ view: view }), "top-left");
+        };
+
         // init map and widgets
         const initMap = () => {
-            map = new WebMap({
-                portalItem: {
-                    id: webMapItemId
-                }
-            });
+          map = new WebMap({
+            portalItem: {
+              id: webMapItemId,
+            },
+          });
 
-            view = new MapView({
-                map: map,
-                container: "viewDiv",
-                zoom: 1,
-                center: [0,0]
-            });
+          view = new MapView({
+            map: map,
+            container: "viewDiv",
+            zoom: 1,
+            center: [0, 0],
+          });
 
-            const msgBox = document.getElementById("titleText");
-            
-            map.when(() => {
-                layer = map.findLayerById(continentsLayer);
-                layer.outFields = "*";
+          const msgBox = document.getElementById("titleText");
 
-                addTimeDetails(layer)
-            })
-                
-            const legend = new Legend({
-                view: view
-            });
-            const legendExpand = new Expand({
-                expandIcon: "legend",
-                expandTooltip: "Legend",
-                view: view,
-                content: legend,
-                expanded: false
-            });
-            view.ui.add(legendExpand, "top-left");
-        }
-    
+          map.when(() => {
+            layer = map.findLayerById(continentsLayer);
+            layer.outFields = "*";
+
+            addTimeDetails(layer);
+          });
+
+          const legend = new Legend({
+            view: view,
+          });
+          const legendExpand = new Expand({
+            expandIcon: "legend",
+            expandTooltip: "Legend",
+            view: view,
+            content: legend,
+            expanded: false,
+          });
+          view.ui.add(legendExpand, "top-left");
+        };
+
         initMap();
-    });
-  </script>
+      });
+    </script>
   </head>
 
   <body>
     <div id="chart-container">
-        <canvas id="bubbleChart"></canvas>
+      <canvas id="bubbleChart"></canvas>
     </div>
     <div id="viewDiv"></div>
     <div id="timeSlider"></div>
-    <calcite-input-time-zone mode="name" id="timezone-picker"></calcite-input-time-zone>
+    <calcite-input-time-zone
+      mode="name"
+      id="timezone-picker"
+    ></calcite-input-time-zone>
   </body>
-
 </html>
