@@ -133,7 +133,7 @@
                 label: `Data for ${dc.continent} in ${time.getFullYear()}`,
                 data: dc.data,
                 backgroundColor: `rgba(${dc.color.r}, ${dc.color.g}, ${dc.color.b}, ${dc.color.a})`,
-                borderColor: `rgba(${dc.color.r * colorFactor}, ${dc.color.g * colorFactor}, ${dc.color.b * colorFactor}, ${dc.color.a * colorFactor})`,
+                borderColor: `rgba(${(dc.color.r * colorFactor).toFixed(0)}, ${(dc.color.g * colorFactor).toFixed(0)}, ${(dc.color.b * colorFactor).toFixed(0)}, ${(dc.color.a * colorFactor).toFixed(0)})`,
                 borderWidth: 1
             }});
         }
@@ -176,8 +176,10 @@
 
             // If chart exists, update data, otherwise create new chart
             if (bubbleChart) {
-                bubbleChart.data = {
-                    datasets: getChartJsDatasets(dataByContinent, time)
+                const chartJsDatasets = getChartJsDatasets(dataByContinent, time);
+                for (let i = 0; i < bubbleChart.data.datasets.length; i++) {
+                    bubbleChart.data.datasets[i].data = chartJsDatasets[i].data;
+                    // datasets: getChartJsDatasets(dataByContinent, time)
                 };
                 bubbleChart.update();
             } else {
@@ -218,7 +220,7 @@
                     timeVisible: false,
                     loop: true,
                     mode: "time-window",
-                    playRate: 2000,
+                    playRate: 500,
                     fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
                     timeExtent: { start, end },
                     stops: {
