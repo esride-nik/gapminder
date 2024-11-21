@@ -38,9 +38,9 @@
         padding: 0;
         margin: 0;
         height: 100%;
-        width: 30%;
+        width: 40%;
         position: absolute;
-        left: 70%;
+        left: 60%;
         top: 0%;
       }
 
@@ -48,7 +48,7 @@
         padding: 0;
         margin: 0;
         height: 100%;
-        width: 70%;
+        width: 60%;
       }
 
       #timeSlider {
@@ -133,17 +133,37 @@
           });
         };
 
-        const getChartJsBubbleDataByContinent = (data) => {
+        const getChartJsBubbleDataByContinent = (data, countriesList) => {
           const formattedData = data.features.map((f) => f.attributes);
           const dataByContinent = rendererInfo.map((r) => {
+            // ensure that countries list for each continent is complete
+            const dataForContinent = formattedData.filter((d) => d.Continent === r.continent)
+            const countriesInDataForContinent = dataForContinent.map((dc) => dc.COUNTRY)
+            // get a complete list of countries for the continent
+            const completeCountriesForContinent = countriesList.filter((c) => c[1] === r.continent).map((c) => c[0])
+            // remove countries that are already in the data
+            const missingCountriesForContinent = completeCountriesForContinent.filter((c) => !countriesInDataForContinent.includes(c))
+            // enhance dataForContinent with missing countries and sort by country name
+            const dataForContinentCountriesEnhanced = [
+                ...dataForContinent,
+                ...missingCountriesForContinent.map((m) => {
+                    return { 
+                        GDPcap: 0,
+                        LEB: 0,
+                        POP: 0,
+                        COUNTRY: m
+                    }
+                })
+            ].sort((a, b) => {
+                var textA = a.COUNTRY.toUpperCase();
+                var textB = b.COUNTRY.toUpperCase();
+                return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+            })
+
             return {
               continent: r.continent,
               color: r.color,
-              data: getChartJsBubbleData(
-                formattedData
-                  .filter((d) => d.Continent === r.continent)
-                  .sort((a, b) => a.label - b.label)
-              ),
+              data: getChartJsBubbleData(dataForContinentCountriesEnhanced),
             };
           });
           // TODO: changing list of countries causes inconsistencies in animation
@@ -173,11 +193,21 @@
           });
         };
 
+        getCountriesList = async (layer) => {
+            const query = layer.createQuery()
+            query.outFields = ["COUNTRY", "Continent"]
+            query.where = "1=1";
+            query.returnGeometry = false;
+            query.returnDistinctValues = true; // Request only distinct values, works from 10.6++
+
+            return layer.queryFeatures(query)
+        }
+
         // Draw chart
-        async function drawChart(time) {
+        async function drawChart(time, countriesList) {
           const data = await getData(time);
 
-          const dataByContinent = getChartJsBubbleDataByContinent(data);
+          const dataByContinent = getChartJsBubbleDataByContinent(data, countriesList);
 
           const chartConfig = {
             type: "bubble",
@@ -251,8 +281,12 @@
             );
           }
 
-          view.whenLayerView(layer).then((lv) => {
-            layerView = lv;
+          const whenLayerView = view.whenLayerView(layer)
+          const whenCountriesListReady = getCountriesList(layer)
+
+          Promise.all([whenLayerView, whenCountriesListReady]).then((values) => {
+            layerView = values[0];
+            const countriesList = values[1].features.map((f) => [f.attributes.COUNTRY, f.attributes.Continent]);
 
             const start = layer.timeInfo.fullTimeExtent.start;
             let end = new Date(start);
@@ -295,7 +329,7 @@
               () => !layerView.updating,
               () => {
                 if (timeSlider?.timeExtent?.start !== undefined)
-                  drawChart(timeSlider?.timeExtent?.start);
+                  drawChart(timeSlider?.timeExtent?.start, countriesList);
               }
             );
           });
