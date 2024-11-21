@@ -166,10 +166,6 @@
               data: getChartJsBubbleData(dataForContinentCountriesEnhanced),
             };
           });
-          // TODO: changing list of countries causes inconsistencies in animation
-          console.log(
-            JSON.stringify(dataByContinent[1].data.map((d) => d.label))
-          );
           return dataByContinent;
         };
 
@@ -239,7 +235,7 @@
                   suggestedMax: 120000,
                   grid: {
                     display: true,
-                    color: "#ccc",
+                    color: "#555",
                   },
                 },
                 y: {
@@ -248,7 +244,7 @@
                   suggestedMax: 95,
                   grid: {
                     display: true,
-                    color: "#ccc",
+                    color: "#555",
                   },
                 },
               },
