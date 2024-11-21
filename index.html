@@ -44,11 +44,20 @@
         top: 0%;
       }
 
-      #chart-container {
+      #countriesChartContainer {
         padding: 0;
         margin: 0;
-        height: 100%;
+        height: 50%;
         width: 60%;
+      }
+
+      #continentsChartContainer {
+        padding: 0;
+        margin: 0;
+        height: 50%;
+        width: 60%;
+        position: absolute;
+        top: 50%;
       }
 
       #timeSlider {
@@ -88,13 +97,15 @@
         const continentsLayer = "193460b984d-layer-3";
 
         // Global instances
-        let bubbleChart;
+        let countriesChart;
+        let continentsChart;
         let layerView;
         let layer;
         let map;
         let view;
         let timeSlider;
         let rendererInfo;
+        let countriesList;
 
         // Fetch data (mock implementation, replace with actual getData)
         async function getData(time) {
@@ -133,32 +144,41 @@
           });
         };
 
-        const getChartJsBubbleDataByContinent = (data, countriesList) => {
+        const getChartJsBubbleDataByCountry = (data) => {
           const formattedData = data.features.map((f) => f.attributes);
           const dataByContinent = rendererInfo.map((r) => {
             // ensure that countries list for each continent is complete
-            const dataForContinent = formattedData.filter((d) => d.Continent === r.continent)
-            const countriesInDataForContinent = dataForContinent.map((dc) => dc.COUNTRY)
+            const dataForContinent = formattedData.filter(
+              (d) => d.Continent === r.continent
+            );
+            const countriesInDataForContinent = dataForContinent.map(
+              (dc) => dc.COUNTRY
+            );
             // get a complete list of countries for the continent
-            const completeCountriesForContinent = countriesList.filter((c) => c[1] === r.continent).map((c) => c[0])
+            const completeCountriesForContinent = countriesList
+              .filter((c) => c[1] === r.continent)
+              .map((c) => c[0]);
             // remove countries that are already in the data
-            const missingCountriesForContinent = completeCountriesForContinent.filter((c) => !countriesInDataForContinent.includes(c))
+            const missingCountriesForContinent =
+              completeCountriesForContinent.filter(
+                (c) => !countriesInDataForContinent.includes(c)
+              );
             // enhance dataForContinent with missing countries and sort by country name
             const dataForContinentCountriesEnhanced = [
-                ...dataForContinent,
-                ...missingCountriesForContinent.map((m) => {
-                    return { 
-                        GDPcap: 0,
-                        LEB: 0,
-                        POP: 0,
-                        COUNTRY: m
-                    }
-                })
+              ...dataForContinent,
+              ...missingCountriesForContinent.map((m) => {
+                return {
+                  GDPcap: 0,
+                  LEB: 0,
+                  POP: 0,
+                  COUNTRY: m,
+                };
+              }),
             ].sort((a, b) => {
-                var textA = a.COUNTRY.toUpperCase();
-                var textB = b.COUNTRY.toUpperCase();
-                return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
-            })
+              var textA = a.COUNTRY.toUpperCase();
+              var textB = b.COUNTRY.toUpperCase();
+              return textA < textB ? -1 : textA > textB ? 1 : 0;
+            });
 
             return {
               continent: r.continent,
@@ -190,25 +210,26 @@
         };
 
         getCountriesList = async (layer) => {
-            const query = layer.createQuery()
-            query.outFields = ["COUNTRY", "Continent"]
-            query.where = "1=1";
-            query.returnGeometry = false;
-            query.returnDistinctValues = true; // Request only distinct values, works from 10.6++
+          const query = layer.createQuery();
+          query.outFields = ["COUNTRY", "Continent"];
+          query.where = "1=1";
+          query.returnGeometry = false;
+          query.returnDistinctValues = true; // Request only distinct values, works from 10.6++
 
-            return layer.queryFeatures(query)
-        }
+          return layer.queryFeatures(query);
+        };
 
-        // Draw chart
-        async function drawCountriesChart(time, countriesList) {
+        drawCharts = async (time) => {
           const data = await getData(time);
+          drawCountriesChart(data, time);
+          drawContinentsChart(data, time);
+        };
 
-          const dataByContinent = getChartJsBubbleDataByContinent(data, countriesList);
-
-          const chartConfig = {
+        getChartConfig = (bubbleData, time, xmin, xmax, ymin, ymax, gdbPostfix, lebPostfix, popPostfix) => {
+          return {
             type: "bubble",
             data: {
-              datasets: getChartJsDatasets(dataByContinent, time),
+              datasets: getChartJsDatasets(bubbleData, time),
             },
             options: {
               responsive: true,
@@ -217,9 +238,9 @@
                   callbacks: {
                     label: (context) => {
                       const dataPoint = context.raw;
-                      return `${dataPoint.label}: GDP per Capita: ${
+                      return `${dataPoint.label}: GDP per Capita${gdbPostfix}: ${
                         dataPoint.x
-                      }, Life Expectancy: ${dataPoint.y}, Population: ${
+                      }, Life Expectancy${lebPostfix}: ${dataPoint.y}, Population${popPostfix}: ${
                         dataPoint.r * 10
                       }`;
                     },
@@ -228,20 +249,20 @@
               },
               scales: {
                 x: {
-                  title: { display: true, text: "GDP per Capita" },
+                  title: { display: true, text: `GDP per Capita${gdbPostfix}` },
                   type: "linear",
                   position: "bottom",
-                  min: 0,
-                  max: 150000,
+                  min: xmin ?? 0,
+                  max: xmax ?? 150000,
                   grid: {
                     display: true,
                     color: "#555",
                   },
                 },
                 y: {
-                  title: { display: true, text: "Life Expectancy" },
-                  min: 30,
-                  max: 90,
+                  title: { display: true, text: `Life Expectancy${lebPostfix}` },
+                  min: ymin ?? 30,
+                  max: ymax ?? 90,
                   grid: {
                     display: true,
                     color: "#555",
@@ -250,20 +271,78 @@
               },
             },
           };
+        };
 
+        drawCountriesChart = async (data, time) => {
+        const bubbleDataByCountry = getChartJsBubbleDataByCountry(data);
+          const chartConfig = getChartConfig(bubbleDataByCountry, time);
           // If chart exists, update data, otherwise create new chart
-          if (bubbleChart) {
-            const chartJsDatasets = getChartJsDatasets(dataByContinent, time);
-            for (let i = 0; i < bubbleChart.data.datasets.length; i++) {
-              bubbleChart.data.datasets[i].data = chartJsDatasets[i].data;
-              bubbleChart.data.datasets[i].label = chartJsDatasets[i].label;
+          if (countriesChart) {
+            const chartJsDatasets = getChartJsDatasets(
+              bubbleDataByCountry,
+              time
+            );
+            for (let i = 0; i < countriesChart.data.datasets.length; i++) {
+              countriesChart.data.datasets[i].data = chartJsDatasets[i].data;
+              countriesChart.data.datasets[i].label = chartJsDatasets[i].label;
             }
-            bubbleChart.update();
+            countriesChart.update();
           } else {
-            const ctx = document.getElementById("bubbleChart").getContext("2d");
-            bubbleChart = new Chart(ctx, chartConfig);
+            const ctx = document
+              .getElementById("countriesChart")
+              .getContext("2d");
+            countriesChart = new Chart(ctx, chartConfig);
           }
-        }
+        };
+
+        drawContinentsChart = async (data, time) => {
+            const formattedData = data.features.map((f) => f.attributes);
+
+            const bubbleDataByContinent = rendererInfo.map((r) => {
+                const dataForContinent = formattedData.filter((d) => d.Continent === r.continent)
+                    const GDPcapAvg = dataForContinent.map((b) => b.GDPcap).reduce(
+                        (accumulator, currentValue) => accumulator + currentValue,
+                        0
+                    ) / dataForContinent.length
+                    const LEBAvg = dataForContinent.map((b) => b.LEB).reduce(
+                        (accumulator, currentValue) => accumulator + currentValue,
+                        0
+                    ) / dataForContinent.length
+                    const POPTot = dataForContinent.map((b) => b.POP).reduce(
+                        (accumulator, currentValue) => accumulator + currentValue,
+                        0
+                    )
+                    return {
+                        continent: r.continent,
+                        color: r.color,
+                        data: getChartJsBubbleData([{
+                            GDPcap: GDPcapAvg,
+                            LEB: LEBAvg,
+                            POP: POPTot,
+                            COUNTRY: r.continent,
+                        }])
+                    }
+                })
+
+            const chartConfig = getChartConfig(bubbleDataByContinent, time, 0, 70000, 30, 90, ' (avg)', ' (avg)', ' (sum)');
+            // If chart exists, update data, otherwise create new chart
+            if (continentsChart) {
+            const chartJsDatasets = getChartJsDatasets(
+                bubbleDataByContinent,
+                time
+            );
+            for (let i = 0; i < continentsChart.data.datasets.length; i++) {
+                continentsChart.data.datasets[i].data = chartJsDatasets[i].data;
+                continentsChart.data.datasets[i].label = chartJsDatasets[i].label;
+            }
+            continentsChart.update();
+            } else {
+            const ctx = document
+                .getElementById("continentsChart")
+                .getContext("2d");
+            continentsChart = new Chart(ctx, chartConfig);
+            }
+        };
 
         const addTimeDetails = (layer) => {
           if (layer?.renderer?.uniqueValueGroups?.length > 0) {
@@ -277,58 +356,63 @@
             );
           }
 
-          const whenLayerView = view.whenLayerView(layer)
-          const whenCountriesListReady = getCountriesList(layer)
+          const whenLayerView = view.whenLayerView(layer);
+          const whenCountriesListReady = getCountriesList(layer);
 
-          Promise.all([whenLayerView, whenCountriesListReady]).then((values) => {
-            layerView = values[0];
-            const countriesList = values[1].features.map((f) => [f.attributes.COUNTRY, f.attributes.Continent]);
+          Promise.all([whenLayerView, whenCountriesListReady]).then(
+            (values) => {
+              layerView = values[0];
+              countriesList = values[1].features.map((f) => [
+                f.attributes.COUNTRY,
+                f.attributes.Continent,
+              ]);
 
-            const start = layer.timeInfo.fullTimeExtent.start;
-            let end = new Date(start);
-            end.setMonth(11); // month is 0-based >.<
-            end.setDate(31); // date is 1-based
+              const start = layer.timeInfo.fullTimeExtent.start;
+              let end = new Date(start);
+              end.setMonth(11); // month is 0-based >.<
+              end.setDate(31); // date is 1-based
 
-            // cool! could be useful, but we don't need it here
-            // let stop = new Date(layer.timeInfo.fullTimeExtent.start)
-            // const effectiveStops = []
-            // while (stop < layer.timeInfo.fullTimeExtent.end) {
-            //     effectiveStops.push(stop);
-            //     stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
-            // }
+              // cool! could be useful, but we don't need it here
+              // let stop = new Date(layer.timeInfo.fullTimeExtent.start)
+              // const effectiveStops = []
+              // while (stop < layer.timeInfo.fullTimeExtent.end) {
+              //     effectiveStops.push(stop);
+              //     stop = new Date(stop.setFullYear(stop.getFullYear() + 1));
+              // }
 
-            // time slider widget initialization
-            timeSlider = new TimeSlider({
-              container: "timeSlider",
-              view: view,
-              timeVisible: false,
-              loop: true,
-              mode: "instant",
-              playRate: 1000,
-              fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
-              timeExtent: { start, end },
-              stops: {
-                interval: {
-                  value: 1,
-                  unit: "years",
+              // time slider widget initialization
+              timeSlider = new TimeSlider({
+                container: "timeSlider",
+                view: view,
+                timeVisible: false,
+                loop: true,
+                mode: "instant",
+                playRate: 1000,
+                fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
+                timeExtent: { start, end },
+                stops: {
+                  interval: {
+                    value: 1,
+                    unit: "years",
+                  },
                 },
-              },
-            });
+              });
 
-            reactiveUtils.watch(
-              () => timeSlider?.timeExtent?.start,
-              () => drawCountriesChart(timeSlider?.timeExtent?.start)
-            );
+              reactiveUtils.watch(
+                () => timeSlider?.timeExtent?.start,
+                () => drawCharts(timeSlider?.timeExtent?.start)
+              );
 
-            // Chart rendering on init and when lv changes
-            reactiveUtils.watch(
-              () => !layerView.updating,
-              () => {
-                if (timeSlider?.timeExtent?.start !== undefined)
-                  drawCountriesChart(timeSlider?.timeExtent?.start, countriesList);
-              }
-            );
-          });
+              // Chart rendering on init and when lv changes
+              reactiveUtils.watch(
+                () => !layerView.updating,
+                () => {
+                  if (timeSlider?.timeExtent?.start !== undefined)
+                    drawCharts(timeSlider?.timeExtent?.start);
+                }
+              );
+            }
+          );
 
           // calcite input time zone component allows users to pick from one of the IANA
           // time zones without having to add the time zones manually to a drop down
@@ -388,8 +472,11 @@
   </head>
 
   <body>
-    <div id="chart-container">
-      <canvas id="bubbleChart"></canvas>
+    <div id="countriesChartContainer">
+      <canvas id="countriesChart"></canvas>
+    </div>
+    <div id="continentsChartContainer">
+      <canvas id="continentsChart"></canvas>
     </div>
     <div id="viewDiv"></div>
     <div id="timeSlider"></div>
