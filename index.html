@@ -17,7 +17,7 @@
         margin: 0;
         height: 100%;
         width: 100%;
-        /* background: black; */
+        background: black;
       }
 
       #viewDiv {
@@ -102,7 +102,7 @@
 
         const getChartJsBubbleData = (featureData) => {
             const scalingFactor = 1
-            const powFactor = 0.15
+            const powFactor = 0.18
             
             return featureData.map((item) => {
                 return {
@@ -121,18 +121,21 @@
                 return {
                     continent: r.continent,
                     color: r.color,
-                    data: getChartJsBubbleData(formattedData.filter((d) => d.Continent === r.continent))
+                    data: getChartJsBubbleData(formattedData.filter((d) => d.Continent === r.continent).sort((a, b) => a.label - b.label))
                 }
             })
+            // TODO: changing list of countries causes inconsistencies in animation
+            console.log(JSON.stringify(dataByContinent[1].data.map((d) => d.label)))
             return dataByContinent
         }
 
         const getChartJsDatasets = (dataByContinent, time) => {
             const colorFactor = 0.8;
+            const alphaFactor = 0.8;
             return dataByContinent.map((dc) => { return {
                 label: `Data for ${dc.continent} in ${time.getFullYear()}`,
                 data: dc.data,
-                backgroundColor: `rgba(${dc.color.r}, ${dc.color.g}, ${dc.color.b}, ${dc.color.a})`,
+                backgroundColor: `rgba(${dc.color.r}, ${dc.color.g}, ${dc.color.b}, ${(dc.color.a * alphaFactor).toFixed(2)})`,
                 borderColor: `rgba(${(dc.color.r * colorFactor).toFixed(0)}, ${(dc.color.g * colorFactor).toFixed(0)}, ${(dc.color.b * colorFactor).toFixed(0)}, ${(dc.color.a * colorFactor).toFixed(0)})`,
                 borderWidth: 1
             }});
@@ -154,7 +157,7 @@
                     plugins: {
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
+                                label: (context) => {
                                     const dataPoint = context.raw;
                                     return `${dataPoint.label}: GDP per Capita: ${dataPoint.x}, Life Expectancy: ${dataPoint.y}, Population: ${dataPoint.r * 10}`;
                                 }
@@ -166,9 +169,41 @@
                             title: { display: true, text: 'GDP per Capita' },
                             type: 'linear',
                             position: 'bottom',
+                            suggestedMin: 80000,
+                            suggestedMax: 120000,
+                            grid: {
+                                display: true,
+                                color: (context) => {
+                                    if (context.tick.value < 40000) {
+                                    return '#f00';
+                                    } else if (context.tick.value >= 40000) {
+                                    return '#ff0';
+                                    } else if (context.tick.value >= 80000) {
+                                    return '#0f0';
+                                    }
+
+                                    return '#ccc';
+                                },
+                            }
                         },
                         y: {
-                            title: { display: true, text: 'Life Expectancy' }
+                            title: { display: true, text: 'Life Expectancy' },
+                            suggestedMin: 85,
+                            suggestedMax: 95,
+                            grid: {
+                                display: true,
+                                color: (context) => {
+                                    if (context.tick.value < 40) {
+                                    return '#f00';
+                                    } else if (context.tick.value >= 40) {
+                                    return '#ff0';
+                                    } else if (context.tick.value >= 75) {
+                                    return '#0f0';
+                                    }
+
+                                    return '#ccc';
+                                },
+                            }
                         }
                     }
                 }
@@ -179,7 +214,7 @@
                 const chartJsDatasets = getChartJsDatasets(dataByContinent, time);
                 for (let i = 0; i < bubbleChart.data.datasets.length; i++) {
                     bubbleChart.data.datasets[i].data = chartJsDatasets[i].data;
-                    // datasets: getChartJsDatasets(dataByContinent, time)
+                    bubbleChart.data.datasets[i].label = chartJsDatasets[i].label;
                 };
                 bubbleChart.update();
             } else {
@@ -220,7 +255,7 @@
                     timeVisible: false,
                     loop: true,
                     mode: "time-window",
-                    playRate: 500,
+                    playRate: 1000,
                     fullTimeExtent: layer.timeInfo.fullTimeExtent.expandTo("years"),
                     timeExtent: { start, end },
                     stops: {
