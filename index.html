@@ -176,8 +176,9 @@
 
             // If chart exists, update data, otherwise create new chart
             if (bubbleChart) {
-                bubbleChart.data.datasets[0].data = bubbleData;
-                bubbleChart.data.datasets[0].label = `Data for ${time.getFullYear()}`;
+                bubbleChart.data = {
+                    datasets: getChartJsDatasets(dataByContinent, time)
+                };
                 bubbleChart.update();
             } else {
                 const ctx = document.getElementById('bubbleChart').getContext('2d');
