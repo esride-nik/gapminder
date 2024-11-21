@@ -200,7 +200,7 @@
         }
 
         // Draw chart
-        async function drawChart(time, countriesList) {
+        async function drawCountriesChart(time, countriesList) {
           const data = await getData(time);
 
           const dataByContinent = getChartJsBubbleDataByContinent(data, countriesList);
@@ -231,8 +231,8 @@
                   title: { display: true, text: "GDP per Capita" },
                   type: "linear",
                   position: "bottom",
-                  suggestedMin: 80000,
-                  suggestedMax: 120000,
+                  min: 0,
+                  max: 150000,
                   grid: {
                     display: true,
                     color: "#555",
@@ -240,8 +240,8 @@
                 },
                 y: {
                   title: { display: true, text: "Life Expectancy" },
-                  suggestedMin: 85,
-                  suggestedMax: 95,
+                  min: 30,
+                  max: 90,
                   grid: {
                     display: true,
                     color: "#555",
@@ -317,7 +317,7 @@
 
             reactiveUtils.watch(
               () => timeSlider?.timeExtent?.start,
-              () => drawChart(timeSlider?.timeExtent?.start)
+              () => drawCountriesChart(timeSlider?.timeExtent?.start)
             );
 
             // Chart rendering on init and when lv changes
@@ -325,7 +325,7 @@
               () => !layerView.updating,
               () => {
                 if (timeSlider?.timeExtent?.start !== undefined)
-                  drawChart(timeSlider?.timeExtent?.start, countriesList);
+                  drawCountriesChart(timeSlider?.timeExtent?.start, countriesList);
               }
             );
           });
